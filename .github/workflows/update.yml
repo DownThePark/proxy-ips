@@ -1,0 +1,37 @@
+name: Update list
+
+on:
+  schedule:
+    - cron:  '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Update proxy-list.txt
+        run: |
+          # Download lists
+          wget https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/http.txt
+          wget https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks4.txt
+          wget https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks5.txt
+
+          # Remove port numbers and consolidate into one file
+          cat http.txt | cut -d ':' -f 1 >> proxy-list-new.txt
+          cat socks4.txt | cut -d ':' -f 1 >> proxy-list-new.txt
+          cat socks5.txt | cut -d ':' -f 1 >> proxy-list-new.txt
+
+          # Remove duplicate lines
+          awk -i inplace '!seen[$0]++' proxy-list-new.txt
+
+      - name: Push
+        run: |
+          if [[ $(diff proxy-list.txt proxy-list-new.txt) ]]; then
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions[bot]"
+            git add proxy-list.txt
+            git commit -m "Update proxy-list.txt"
+            git push -u origin main
+          fi
